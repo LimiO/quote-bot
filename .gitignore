@@ -3,6 +3,7 @@ __pycache__/
 templates
 t
 results
+fonts
 
 config.py
 messages.py

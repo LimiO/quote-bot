@@ -1,8 +1,7 @@
-from typing import List
+from typing import List, Tuple
 from datetime import datetime
 from hashlib import md5
 import os
-import textwrap
 
 from PIL import Image, ImageDraw, ImageFont
 from peewee import Model, PrimaryKeyField, IntegerField, CharField
@@ -10,39 +9,54 @@ from aiogram.types import InlineQueryResultCachedPhoto, InlineKeyboardMarkup, \
     InlineKeyboardButton
 
 from utils import db, bot
-from config import FONT_PATH
-from messages import quote, quote_1
+from messages import quote
+from config import CHANNEL_ID
 
 
 class Template(Model):
     id = PrimaryKeyField()
     name: str = CharField()
-    file_id: str = CharField()
+    pic_file_id: str = CharField()
+    temp_file_id: str = CharField(null=True)
     file_path: str = CharField()
-    font_path: str = FONT_PATH
+    font_path: str = CharField()
     font_size: int = IntegerField()
+    font_color: str = CharField()
     width: int = IntegerField()
-    x: int = IntegerField()
-    y: int = IntegerField()
+    left_x: int = IntegerField()
+    left_y: int = IntegerField()
+    right_x: int = IntegerField()
+    right_y: int = IntegerField()
+    rectangle_color: str = CharField()
+    offset: int = IntegerField(null=True)
+    shadow_color: str = CharField(null=True)
 
     @classmethod
     def items(cls) -> List[InlineQueryResultCachedPhoto]:
         return [temp.item for temp in list(cls.select())]
+
+    async def save_template(self):
+        image = Image.open(self.file_path)
+        draw = ImageDraw.Draw(image)
+        draw.rectangle(((self.left_x, self.left_y), (self.right_x, self.right_y)),
+                       width=2, outline=self.rectangle_color)
+        name, extension = self.file_path.split('.')
+        new_name = name+'_temp.'+extension
+        image.save(new_name)
+        with open(new_name, 'rb') as file:
+            msg = await bot.send_photo(CHANNEL_ID, file)
+        self.temp_file_id = msg.photo[-1].file_id
+        os.remove(new_name)
+        self.save()
 
     @property
     def item(self) -> InlineQueryResultCachedPhoto:
         now = datetime.now()
         id_ = md5(bytes((str(now)+self.file_path+str(now)).encode())).hexdigest()
         return InlineQueryResultCachedPhoto(
-            id=id_, photo_file_id=self.file_id,
+            id=id_, photo_file_id=self.temp_file_id,
             title=self.name, caption=self.name, reply_markup=self.markup
         )
-
-    @property
-    def markup(self) -> InlineKeyboardMarkup:
-        markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton(quote, callback_data=f'quote_{self.id}'))
-        return markup
 
     @staticmethod
     def next_file_name() -> str:
@@ -52,32 +66,57 @@ class Template(Model):
             name = item.split('.')[0]
             if name.isdigit():
                 names.append(int(name))
-        return f'templates/{max(names)+1}.jpg'
+        return f'templates/{max(names) + 1}.jpg'
+
+    @property
+    def markup(self) -> InlineKeyboardMarkup:
+        markup = InlineKeyboardMarkup()
+        markup.row(InlineKeyboardButton(quote, callback_data=f'quote_{self.id}'))
+        return markup
 
     async def send(self, text: str, user_id: int):
         image = Image.open(self.file_path)
         draw = ImageDraw.Draw(image)
         font = ImageFont.truetype(self.font_path, size=self.font_size)
-        text = textwrap.fill(text, width=self.width)
-        offset, shadow_color = 4, 'black'
-        x, y = self.x, self.y
-        for off in range(offset):
-            params = {"text": text, "font": font, "fill": shadow_color}
-            draw.text((x - off, y), **params)
-            draw.text((x + off, y), **params)
-            draw.text((x, y + off), **params)
-            draw.text((x, y - off), **params)
-            draw.text((x - off, y + off), **params)
-            draw.text((x + off, y + off), **params)
-            draw.text((x - off, y - off), **params)
-            draw.text((x + off, y - off), **params)
+        text = self.__formatted_text(text)
+        print(text)
+        w, h = draw.textsize(text, font=font)
+        x, y = (self.left_x+self.right_x-w)/2, (self.left_y+self.right_y-h)/2
+        if self.offset:
+            for off in range(self.offset):
+                params = {"text": text, "font": font, "fill": self.shadow_color}
+                draw.text((x - off, y), **params)
+                draw.text((x + off, y), **params)
+                draw.text((x, y + off), **params)
+                draw.text((x, y - off), **params)
+                draw.text((x - off, y + off), **params)
+                draw.text((x + off, y + off), **params)
+                draw.text((x - off, y - off), **params)
+                draw.text((x + off, y - off), **params)
 
-        draw.text((x, y), text, font=font, fill="white")
+        draw.text((x, y), text, font=font, fill=self.font_color)
         name = f'results/{user_id}.jpg'
         image.save(name)
         with open(name, 'rb') as file:
-            await bot.send_photo(user_id, file, quote_1)
+            await bot.send_photo(user_id, file)
         os.remove(name)
+
+    def __formatted_line(self, text: str) -> str:
+        words = text.split(' ')
+        new_string, line = str(), str()
+        for word in words:
+            if len(line + word) > self.width:
+                new_string += line + '\n'
+                line = ''
+            line += word + ' '
+        new_string += line + '\n'
+        return new_string
+
+    def __formatted_text(self, text: str) -> str:
+        result = str()
+        for line in text.splitlines():
+            result += self.__formatted_line(line)
+        return result.strip()
 
     class Meta:
         database = db

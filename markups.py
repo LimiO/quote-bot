@@ -7,6 +7,8 @@ import messages as msg
 
 admin_markup = ReplyKeyboardMarkup(resize_keyboard=True)
 admin_markup.row(msg.add_template)
+admin_markup.row(msg.add_font)
+admin_markup.row(msg.check_fonts)
 
 
 main_markup = InlineKeyboardMarkup()
