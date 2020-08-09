@@ -21,11 +21,15 @@ db = PostgresqlExtDatabase(DB_NAME, user=DB_USER, password=DB_PASSWORD,
 
 def font_pic():
     fonts = os.listdir('fonts')
-    image = Image.new('RGB', (PIC_WIDTH, len(fonts)*PF_HEIGHT), 'white')
+    image = Image.new('RGB', (PIC_WIDTH, len(fonts)*PF_HEIGHT*2), 'white')
     draw = ImageDraw.Draw(image)
     for num, font_ in enumerate(fonts):
         font = ImageFont.truetype(font=f'fonts/{font_}', size=FONT_HEIGHT)
-        draw.text((LEFT_MARGIN, TOP_MARGIN+num*PF_HEIGHT),
+        draw.text((LEFT_MARGIN, TOP_MARGIN+num*PF_HEIGHT*2),
                   test_template.format(font_), font=font, fill='black')
+        draw.rectangle(((0, (2*num+1)*PF_HEIGHT), (PIC_WIDTH, (num+1)*PF_HEIGHT*2)), fill='black')
+        draw.text((LEFT_MARGIN, TOP_MARGIN+(2*num+1)*PF_HEIGHT),
+                  test_template.format(font_), font=font, fill='white')
     image.save('fonts.jpg', 'JPEG')
+
 
