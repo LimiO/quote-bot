@@ -50,7 +50,7 @@ async def admin_state(message: Message):
     items, name, font_name, font_color, rectangle_color, align, offset, shadow_color = args
     if offset:
         offset = int(offset)
-    font_size, width, left_x, left_y, right_x, right_y, limit = list(map(int, items.split()))
+    font_size, width, left_x, left_y, right_x, right_y = list(map(int, items.split()))
     photo = message.photo[-1]
     file_name = db.Template.next_file_name()
     await bot.download_file_by_id(
@@ -60,7 +60,7 @@ async def admin_state(message: Message):
         photo.file_id, file_name, font_size, width,
         left_x, left_y, right_x, right_y, name,
         'fonts/'+font_name, font_color, rectangle_color,
-        limit, align, offset, shadow_color,
+        align, offset, shadow_color,
     )
     await template.save_template()
     admin.reset_state()
@@ -74,7 +74,6 @@ async def font_0(message: Message):
     await bot.download_file_by_id(
         message.document.file_id, destination=f'fonts/{message.document.file_name}'
     )
-    user.reset_state()
     await message.answer(msg.admin_states_3)
 
 

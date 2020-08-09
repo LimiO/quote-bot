@@ -9,7 +9,7 @@ from aiogram.types import InlineQueryResultCachedPhoto, InlineKeyboardMarkup, \
     InlineKeyboardButton
 
 from utils import db, bot
-from messages import quote
+from messages import quote, info_template, caption_template
 from config import CHANNEL_ID
 
 
@@ -28,7 +28,6 @@ class Template(Model):
     right_x: int = IntegerField()
     right_y: int = IntegerField()
     rectangle_color: str = CharField()
-    limit: int = IntegerField()
     align: str = CharField()
     offset: int = IntegerField(null=True)
     shadow_color: str = CharField(null=True)
@@ -42,6 +41,7 @@ class Template(Model):
         draw = ImageDraw.Draw(image)
         draw.rectangle(((self.left_x, self.left_y), (self.right_x, self.right_y)),
                        width=2, outline=self.rectangle_color)
+        self.draw_text(draw, self.info)
         name, extension = self.file_path.split('.')
         new_name = name+'_temp.'+extension
         image.save(new_name)
@@ -51,13 +51,37 @@ class Template(Model):
         os.remove(new_name)
         self.save()
 
+    def draw_text(self, draw, text: str):
+        text = self.__formatted_text(text)
+        font = self.image_font
+        w, h = draw.textsize(text, font=font)
+        x, y = self.cords(w, h)
+        draw.text((x, y), text, font=font, fill=self.font_color, align=self.align)
+        if self.offset:
+            for off in range(self.offset):
+                params = {"text": text, "font": font, "fill": self.shadow_color,
+                          "align": self.align}
+                draw.text((x - off, y), **params)
+                draw.text((x + off, y), **params)
+                draw.text((x, y + off), **params)
+                draw.text((x, y - off), **params)
+                draw.text((x - off, y + off), **params)
+                draw.text((x + off, y + off), **params)
+                draw.text((x - off, y - off), **params)
+                draw.text((x + off, y - off), **params)
+
+    @property
+    def info(self) -> str:
+        return info_template.format(self.name, self.font_size, self.width)
+
     @property
     def item(self) -> InlineQueryResultCachedPhoto:
         now = datetime.now()
         id_ = md5(bytes((str(now)+self.file_path+str(now)).encode())).hexdigest()
         return InlineQueryResultCachedPhoto(
             id=id_, photo_file_id=self.temp_file_id,
-            title=self.name, caption=self.name, reply_markup=self.markup
+            title=self.name, caption=caption_template.format(self.name),
+            reply_markup=self.markup
         )
 
     @staticmethod
@@ -76,31 +100,22 @@ class Template(Model):
         markup.row(InlineKeyboardButton(quote, callback_data=f'quote_{self.id}'))
         return markup
 
+    @property
+    def image_font(self) -> ImageFont.truetype:
+        return ImageFont.truetype(self.font_path, size=self.font_size)
+
     async def send(self, text: str, user_id: int):
         image = Image.open(self.file_path)
         draw = ImageDraw.Draw(image)
-        font = ImageFont.truetype(self.font_path, size=self.font_size)
-        text = self.__formatted_text(text)
-        w, h = draw.textsize(text, font=font)
-        x, y = (self.left_x+self.right_x-w)/2, (self.left_y+self.right_y-h)/2
-        if self.offset:
-            for off in range(self.offset):
-                params = {"text": text, "font": font, "fill": self.shadow_color}
-                draw.text((x - off, y), **params)
-                draw.text((x + off, y), **params)
-                draw.text((x, y + off), **params)
-                draw.text((x, y - off), **params)
-                draw.text((x - off, y + off), **params)
-                draw.text((x + off, y + off), **params)
-                draw.text((x - off, y - off), **params)
-                draw.text((x + off, y - off), **params)
-
-        draw.text((x, y), text, font=font, fill=self.font_color, align=self.align)
+        self.draw_text(draw, text)
         name = f'results/{user_id}.jpg'
         image.save(name)
         with open(name, 'rb') as file:
             await bot.send_photo(user_id, file)
         os.remove(name)
+
+    def cords(self, w: int, h: int) -> Tuple[float, float]:
+        return (self.left_x+self.right_x-w)/2, (self.left_y+self.right_y-h)/2
 
     def __formatted_line(self, text: str) -> str:
         words = text.split(' ')
