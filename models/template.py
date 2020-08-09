@@ -28,6 +28,8 @@ class Template(Model):
     right_x: int = IntegerField()
     right_y: int = IntegerField()
     rectangle_color: str = CharField()
+    limit: int = IntegerField()
+    align: str = CharField()
     offset: int = IntegerField(null=True)
     shadow_color: str = CharField(null=True)
 
@@ -79,7 +81,6 @@ class Template(Model):
         draw = ImageDraw.Draw(image)
         font = ImageFont.truetype(self.font_path, size=self.font_size)
         text = self.__formatted_text(text)
-        print(text)
         w, h = draw.textsize(text, font=font)
         x, y = (self.left_x+self.right_x-w)/2, (self.left_y+self.right_y-h)/2
         if self.offset:
@@ -94,7 +95,7 @@ class Template(Model):
                 draw.text((x - off, y - off), **params)
                 draw.text((x + off, y - off), **params)
 
-        draw.text((x, y), text, font=font, fill=self.font_color)
+        draw.text((x, y), text, font=font, fill=self.font_color, align=self.align)
         name = f'results/{user_id}.jpg'
         image.save(name)
         with open(name, 'rb') as file:

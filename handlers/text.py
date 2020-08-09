@@ -45,12 +45,12 @@ async def add_template(message: Message):
 async def admin_state(message: Message):
     admin = db.get_user(message.from_user.id)
     args = message.caption.split(';')
-    if len(args) == 5:
+    if len(args) == 6:
         args.extend([None, None])
-    items, name, font_name, font_color, rectangle_color, offset, shadow_color = args
+    items, name, font_name, font_color, rectangle_color, align, offset, shadow_color = args
     if offset:
         offset = int(offset)
-    font_size, width, left_x, left_y, right_x, right_y = list(map(int, items.split()))
+    font_size, width, left_x, left_y, right_x, right_y, limit = list(map(int, items.split()))
     photo = message.photo[-1]
     file_name = db.Template.next_file_name()
     await bot.download_file_by_id(
@@ -60,7 +60,7 @@ async def admin_state(message: Message):
         photo.file_id, file_name, font_size, width,
         left_x, left_y, right_x, right_y, name,
         'fonts/'+font_name, font_color, rectangle_color,
-        offset, shadow_color
+        limit, align, offset, shadow_color,
     )
     await template.save_template()
     admin.reset_state()

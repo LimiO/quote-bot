@@ -51,13 +51,13 @@ def get_templates() -> List[Template]:
 def set_template(pic_file_id: str, file_path: str, font_size: int,
                  width: int, left_x: int, left_y: int, right_x: int,
                  right_y: int, name: str, font_path: str, font_color: str,
-                 rectangle_color: str, offset: Union[int, None],
-                 shadow_color: Union[str, None]) -> Template:
+                 rectangle_color: str, limit: int, align: str,
+                 offset: Union[int, None], shadow_color: Union[str, None]) -> Template:
     return Template.create(
         pic_file_id=pic_file_id, file_path=file_path, font_size=font_size, width=width,
         left_x=left_x, left_y=left_y, right_x=right_x, right_y=right_y, name=name,
         font_path=font_path, font_color=font_color, rectangle_color=rectangle_color,
-        offset=offset, shadow_color=shadow_color
+        offset=offset, shadow_color=shadow_color, limit=limit, align=align
     )
 
 
