@@ -41,7 +41,6 @@ class Template(Model):
         draw = ImageDraw.Draw(image)
         draw.rectangle(((self.left_x, self.left_y), (self.right_x, self.right_y)),
                        width=2, outline=self.rectangle_color)
-        self.draw_text(draw, self.info)
         name, extension = self.file_path.split('.')
         new_name = name+'_temp.'+extension
         image.save(new_name)

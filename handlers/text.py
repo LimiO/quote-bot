@@ -70,7 +70,6 @@ async def admin_state(message: Message):
 @dp.message_handler(lambda m: db.get_user(m.from_user.id).state == 'add_font',
                     content_types=['document'])
 async def font_0(message: Message):
-    user = db.get_user(message.from_user.id)
     await bot.download_file_by_id(
         message.document.file_id, destination=f'fonts/{message.document.file_name}'
     )
