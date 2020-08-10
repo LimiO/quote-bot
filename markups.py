@@ -12,6 +12,11 @@ admin_markup.row(msg.check_fonts)
 
 
 main_markup = InlineKeyboardMarkup()
-main_markup.row(InlineKeyboardButton(
-    text=msg.check, switch_inline_query_current_chat='templates')
-)
+main_markup.row(InlineKeyboardButton(text=msg.check, switch_inline_query_current_chat='templates'))
+main_markup.row(InlineKeyboardButton(text=msg.suggest, callback_data='suggest_template'))
+
+
+def back_markup(callback: str) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup()
+    markup.row(InlineKeyboardButton(text=msg.back, callback_data=callback))
+    return markup
